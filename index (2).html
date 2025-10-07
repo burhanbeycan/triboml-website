@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriboML | Advanced Polymer Triboelectric Database & Machine Learning Platform</title>
+    <meta name="description" content="Comprehensive polymer triboelectric database with 250+ molecular descriptors, machine learning analysis, and interactive visualization tools for materials science research.">
+    <meta name="keywords" content="polymer, triboelectric, machine learning, molecular descriptors, materials science, QSAR, QSPR">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-morph {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        .descriptor-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            margin: 2px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .descriptor-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .quantum { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .physicochemical { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+        .topological { background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; }
+        .structural { background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; }
+        .electronic { background: linear-gradient(135deg, #fa709a, #fee140); color: white; }
+        
+        .nav-link {
+            position: relative;
+            color: #6b7280;
+            transition: color 0.3s;
+            padding: 8px 0;
+        }
+        .nav-link:hover { color: #667eea; }
+        .nav-link.active { 
+            color: #667eea; 
+            font-weight: 600;
+        }
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .data-row {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .data-row:hover {
+            background: linear-gradient(90deg, rgba(102,126,234,0.05), rgba(118,75,162,0.05));
+            transform: translateX(4px);
+        }
+        
+        .pagination-btn {
+            padding: 8px 14px;
+            margin: 0 2px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .pagination-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+        }
+        .pagination-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+            border: 1px solid rgba(102,126,234,0.1);
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(102,126,234,0.15);
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in { animation: slideIn 0.6s ease-out forwards; }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            animation: fadeIn 0.3s;
+        }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .search-box {
+            padding: 12px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            width: 100%;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
+        .filter-chip {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 4px;
+            border-radius: 20px;
+            background: #f3f4f6;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            font-weight: 500;
+        }
+        .filter-chip:hover {
+            background: #e5e7eb;
+        }
+        .filter-chip.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .info-section {
+            background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .methodology-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        .methodology-card:hover {
+            box-shadow: 0 4px 12px rgba(102,126,234,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #9ca3af;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .close-btn:hover {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="glass-morph fixed top-0 w-full z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-xl">T</span>
+                </div>
+                <div>
+                    <span class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">TriboML</span>
+                    <p class="text-xs text-gray-600">Polymer Triboelectric ML Platform</p>
+                </div>
+            </div>
+            <div class="hidden md:flex space-x-8">
+                <a href="#dashboard" class="nav-link active">Dashboard</a>
+                <a href="#database" class="nav-link">Database</a>
+                <a href="#descriptors" class="nav-link">Descriptors</a>
+                <a href="#analysis" class="nav-link">Analysis</a>
+                <a href="#methodology" class="nav-link">Methodology</a>
+                <a href="#about" class="nav-link">About</a>
+            </div>
+            <button onclick="exportData()" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-2 rounded-lg hover:shadow-lg transition-all font-medium">
+                Export Data
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="pt-20 px-6 pb-10">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="max-w-7xl mx-auto mt-8 animate-slide-in">
+            <div class="mb-8">
+                <h1 class="text-5xl font-bold text-white mb-3">Polymer Triboelectric Database</h1>
+                <p class="text-white text-lg opacity-90">Advanced machine learning platform for polymer materials characterization with 250+ molecular descriptors</p>
+            </div>
+            
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="stat-card">
+                    <div class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                        <span id="totalPolymers">0</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2 font-medium">Total Polymers</div>
+                    <div class="text-xs text-gray-500 mt-1">Comprehensive database</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-4xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+                        <span id="totalDescriptors">250</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2 font-medium">Molecular Descriptors</div>
+                    <div class="text-xs text-gray-500 mt-1">5 categories</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-4xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">
+                        <span id="avgPerformance">0.0</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2 font-medium">Avg Performance</div>
+                    <div class="text-xs text-gray-500 mt-1">Triboelectric efficiency</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                        <span id="bestPolymer">-</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2 font-medium">Best Performer</div>
+                    <div class="text-xs text-gray-500 mt-1">Highest efficiency</div>
+                </div>
+            </div>
+
+            <!-- Info Section -->
+            <div class="info-section glass-morph">
+                <h3 class="font-bold text-lg mb-2">About This Platform</h3>
+                <p class="text-gray-700 leading-relaxed">
+                    This platform provides a comprehensive database of polymer materials with detailed molecular descriptors for triboelectric nanogenerator (TENG) applications. 
+                    The database includes <strong>quantum chemical</strong>, <strong>physicochemical</strong>, <strong>topological</strong>, <strong>structural</strong>, and <strong>electronic</strong> descriptors 
+                    calculated using state-of-the-art computational chemistry methods. Machine learning models can be trained using this data for property prediction and materials discovery.
+                </p>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-morph rounded-2xl p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="showAnalysis()" class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all font-medium">
+                        📊 View Analysis
+                    </button>
+                    <button onclick="exportData()" class="px-5 py-2.5 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-all font-medium">
+                        💾 Export CSV
+                    </button>
+                    <button onclick="showDescriptorDetails()" class="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-red-500 text-white rounded-lg hover:shadow-lg transition-all font-medium">
+                        🔬 Descriptor Info
+                    </button>
+                    <button onclick="showMethodology()" class="px-5 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:shadow-lg transition-all font-medium">
+                        📚 Methodology
+                    </button>
+                    <button onclick="showStatistics()" class="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all font-medium">
+                        📈 Statistics
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Database Section -->
+        <section id="database" class="max-w-7xl mx-auto mt-12">
+            <div class="glass-morph rounded-2xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold">Polymer Database</h2>
+                        <p class="text-sm text-gray-600 mt-1">Browse and search through comprehensive polymer data</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <input type="text" id="searchInput" placeholder="Search polymers..." class="search-box w-64" onkeyup="searchPolymers()">
+                        <select id="filterCategory" class="px-4 py-2 border-2 border-gray-200 rounded-lg font-medium" onchange="filterData()">
+                            <option value="">All Performance Levels</option>
+                            <option value="high">High Performance (&gt;80)</option>
+                            <option value="medium">Medium Performance (40-80)</option>
+                            <option value="low">Low Performance (&lt;40)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filter Chips -->
+                <div class="mb-6">
+                    <p class="text-sm text-gray-600 mb-2 font-medium">Filter by Category:</p>
+                    <span class="filter-chip active" onclick="setFilter('all', this)">All Polymers</span>
+                    <span class="filter-chip" onclick="setFilter('synthetic', this)">Synthetic</span>
+                    <span class="filter-chip" onclick="setFilter('biopolymer', this)">Biopolymer</span>
+                    <span class="filter-chip" onclick="setFilter('conductive', this)">Conductive</span>
+                    <span class="filter-chip" onclick="setFilter('fluorinated', this)">Fluorinated</span>
+                </div>
+
+                <!-- Data Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200">
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Polymer Name</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">SMILES</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Category</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Performance</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Top Descriptors</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <tr><td colspan="7" class="text-center py-8"><div class="loading-spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex justify-between items-center mt-6">
+                    <div class="text-sm text-gray-600">
+                        Showing <span id="showingStart">0</span> to <span id="showingEnd">0</span> of <span id="totalItems">0</span> polymers
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="changePage(-1)" id="prevBtn" class="pagination-btn">← Previous</button>
+                        <div id="paginationNumbers" class="flex space-x-2"></div>
+                        <button onclick="changePage(1)" id="nextBtn" class="pagination-btn">Next →</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analysis Section -->
+        <section id="analysis" class="max-w-7xl mx-auto mt-12">
+            <div class="glass-morph rounded-2xl p-6">
+                <h2 class="text-2xl font-bold mb-2">Performance Analysis & Visualization</h2>
+                <p class="text-sm text-gray-600 mb-6">Statistical analysis and correlation studies of polymer performance</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">Performance Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">Category Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Methodology Section -->
+        <section id="methodology" class="max-w-7xl mx-auto mt-12">
+            <div class="glass-morph rounded-2xl p-8">
+                <h2 class="text-3xl font-bold mb-4">Methodology & Computational Approach</h2>
+                <p class="text-gray-700 mb-6 leading-relaxed">
+                    This platform employs a comprehensive computational framework for polymer characterization and triboelectric performance prediction. 
+                    The methodology integrates quantum chemical calculations, molecular descriptor generation, and machine learning algorithms to establish 
+                    quantitative structure-property relationships (QSPR) for triboelectric materials.
+                </p>
+
+                <div class="methodology-card">
+                    <h3 class="text-xl font-bold mb-3 text-purple-700">1. Molecular Descriptor Calculation</h3>
+                    <p class="text-gray-700 mb-3">
+                        Molecular descriptors are calculated using multiple computational chemistry software packages including RDKit, Mordred, and custom quantum chemical calculations. 
+                        The descriptor set encompasses five major categories:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li><strong>Quantum Chemical Descriptors (50):</strong> HOMO/LUMO energies, dipole moments, polarizability, electrophilicity indices calculated using DFT methods (B3LYP/6-31G*)</li>
+                        <li><strong>Physicochemical Descriptors (50):</strong> Molecular weight, density, glass transition temperature, thermal properties, mechanical properties</li>
+                        <li><strong>Topological Descriptors (50):</strong> Wiener index, Randić index, Zagreb indices, connectivity indices, graph-theoretical descriptors</li>
+                        <li><strong>Structural Descriptors (50):</strong> Atom counts, bond counts, ring systems, branching indices, functional group analysis</li>
+                        <li><strong>Electronic Descriptors (50):</strong> Charge distributions, electrostatic potentials, electron density analysis, molecular orbital properties</li>
+                    </ul>
+                </div>
+
+                <div class="methodology-card">
+                    <h3 class="text-xl font-bold mb-3 text-blue-700">2. Data Generation & Validation</h3>
+                    <p class="text-gray-700 mb-3">
+                        The database contains both experimental and computationally predicted data for polymer triboelectric performance. 
+                        Synthetic data generation follows realistic physical and chemical constraints:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Performance values are correlated with descriptor values using physically meaningful relationships</li>
+                        <li>Category-specific performance distributions reflect experimental observations (e.g., fluorinated polymers show higher triboelectric performance)</li>
+                        <li>Chemical modifications (crosslinking, grafting, copolymerization) are modeled with appropriate performance enhancements</li>
+                        <li>Gaussian noise is added to simulate experimental uncertainty and measurement variability</li>
+                    </ul>
+                </div>
+
+                <div class="methodology-card">
+                    <h3 class="text-xl font-bold mb-3 text-green-700">3. Machine Learning Framework</h3>
+                    <p class="text-gray-700 mb-3">
+                        The platform supports various machine learning algorithms for QSPR model development:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li><strong>Feature Selection:</strong> Correlation analysis, recursive feature elimination, LASSO regularization</li>
+                        <li><strong>Regression Models:</strong> Random Forest, Gradient Boosting, Support Vector Regression, Neural Networks</li>
+                        <li><strong>Model Validation:</strong> k-fold cross-validation, external test set validation, Y-randomization tests</li>
+                        <li><strong>Performance Metrics:</strong> R², RMSE, MAE, Q² for predictive model assessment</li>
+                    </ul>
+                </div>
+
+                <div class="methodology-card">
+                    <h3 class="text-xl font-bold mb-3 text-pink-700">4. Applications & Use Cases</h3>
+                    <p class="text-gray-700 mb-3">
+                        This database and platform enable several research applications:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li><strong>Materials Discovery:</strong> Virtual screening of polymer candidates for high-performance triboelectric nanogenerators</li>
+                        <li><strong>Property Prediction:</strong> Rapid estimation of triboelectric performance without experimental synthesis</li>
+                        <li><strong>Structure-Property Analysis:</strong> Understanding molecular features that govern triboelectric behavior</li>
+                        <li><strong>Rational Design:</strong> Guiding chemical modifications to optimize polymer performance</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="max-w-7xl mx-auto mt-12 mb-12">
+            <div class="glass-morph rounded-2xl p-8">
+                <h2 class="text-3xl font-bold mb-4">About TriboML Platform</h2>
+                <p class="text-gray-700 mb-4 leading-relaxed">
+                    <strong>TriboML</strong> is an advanced computational platform designed for the characterization and prediction of polymer triboelectric properties 
+                    using machine learning and molecular descriptor-based approaches. The platform integrates comprehensive molecular descriptors with experimental 
+                    performance data to enable quantitative structure-property relationship (QSPR) modeling for triboelectric nanogenerator (TENG) materials.
+                </p>
+                <p class="text-gray-700 mb-4 leading-relaxed">
+                    The database currently contains <strong>200+ polymer entries</strong> with <strong>250 molecular descriptors</strong> spanning quantum chemical, 
+                    physicochemical, topological, structural, and electronic properties. This comprehensive descriptor set enables robust machine learning model 
+                    development for property prediction and materials discovery applications.
+                </p>
+                <p class="text-gray-700 mb-4 leading-relaxed">
+                    <strong>Key Features:</strong>
+                </p>
+                <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4 mb-4">
+                    <li>Comprehensive polymer database with detailed molecular descriptors</li>
+                    <li>Interactive data visualization and analysis tools</li>
+                    <li>Advanced filtering and search capabilities</li>
+                    <li>CSV export for machine learning model development</li>
+                    <li>Real-time performance statistics and correlations</li>
+                    <li>Academic-grade methodology documentation</li>
+                </ul>
+                <p class="text-gray-700 leading-relaxed">
+                    This platform is designed for researchers, materials scientists, and engineers working in the fields of triboelectric nanogenerators, 
+                    polymer materials, computational chemistry, and machine learning-driven materials discovery.
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal for Polymer Details -->
+    <div id="polymerModal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Global variables
+        let polymerDatabase = [];
+        let filteredData = [];
+        let descriptorCategories = {};
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let currentFilter = 'all';
+
+        // Load data from JSON file
+        async function loadData() {
+            try {
+                const response = await fetch('polymer_database.json');
+                const data = await response.json();
+                
+                polymerDatabase = data.polymers;
+                descriptorCategories = data.descriptor_categories;
+                filteredData = [...polymerDatabase];
+                
+                updateStats();
+                renderTable();
+                renderPagination();
+                setupCharts();
+                setupEventListeners();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('dataTableBody').innerHTML = 
+                    '<tr><td colspan="7" class="text-center py-8 text-red-600">Error loading data. Please refresh the page.</td></tr>';
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalPolymers').textContent = polymerDatabase.length;
+            
+            const avgPerf = polymerDatabase.reduce((sum, p) => sum + p.performance, 0) / polymerDatabase.length;
+            document.getElementById('avgPerformance').textContent = avgPerf.toFixed(1);
+            
+            const bestPolymer = polymerDatabase.reduce((best, p) => p.performance > best.performance ? p : best, polymerDatabase[0]);
+            const shortName = bestPolymer.name.length > 20 ? bestPolymer.name.substring(0, 20) + '...' : bestPolymer.name;
+            document.getElementById('bestPolymer').textContent = shortName;
+        }
+
+        // Render data table
+        function renderTable() {
+            const tbody = document.getElementById('dataTableBody');
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-600">No polymers found matching your criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = pageData.map(polymer => {
+                const keyDescriptors = Object.entries(polymer.descriptors)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3)
+                    .map(([key]) => {
+                        const category = Object.entries(descriptorCategories).find(([_, cat]) => 
+                            cat.descriptors.includes(key)
+                        );
+                        const categoryClass = category ? category[0] : 'quantum';
+                        const displayName = key.replace(/_/g, ' ').substring(0, 12);
+                        return `<span class="descriptor-badge ${categoryClass}" title="${key.replace(/_/g, ' ')}">${displayName}</span>`;
+                    })
+                    .join('');
+
+                const performanceColor = polymer.performance > 80 ? 'from-green-400 to-emerald-500' : 
+                                       polymer.performance > 40 ? 'from-blue-400 to-cyan-500' : 
+                                       'from-orange-400 to-red-500';
+
+                return `
+                    <tr class="data-row border-b border-gray-100">
+                        <td class="py-3 px-4 text-sm font-medium text-gray-700">${polymer.id}</td>
+                        <td class="py-3 px-4 font-medium text-gray-900">${polymer.name}</td>
+                        <td class="py-3 px-4 text-xs font-mono text-gray-600">${polymer.smiles.substring(0, 25)}${polymer.smiles.length > 25 ? '...' : ''}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-3 py-1 text-xs rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-purple-700 font-medium">
+                                ${polymer.category}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center">
+                                <div class="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                                    <div class="bg-gradient-to-r ${performanceColor} h-2.5 rounded-full" style="width: ${polymer.performance}%"></div>
+                                </div>
+                                <span class="text-sm font-semibold text-gray-700">${polymer.performance.toFixed(1)}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">${keyDescriptors}</td>
+                        <td class="py-3 px-4">
+                            <button onclick="showPolymerDetails('${polymer.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold transition-colors">
+                                View Details →
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Update pagination info
+            document.getElementById('showingStart').textContent = start + 1;
+            document.getElementById('showingEnd').textContent = Math.min(end, filteredData.length);
+            document.getElementById('totalItems').textContent = filteredData.length;
+        }
+
+        // Render pagination
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            const paginationNumbers = document.getElementById('paginationNumbers');
+            
+            let pages = [];
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                pages.push(`
+                    <button onclick="goToPage(${i})" class="pagination-btn ${i === currentPage ? 'active' : ''}">
+                        ${i}
+                    </button>
+                `);
+            }
+            
+            paginationNumbers.innerHTML = pages.join('');
+            
+            // Update prev/next buttons
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
+
+        // Change page
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            currentPage = Math.max(1, Math.min(totalPages, currentPage + direction));
+            renderTable();
+            renderPagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Go to specific page
+        function goToPage(page) {
+            currentPage = page;
+            renderTable();
+            renderPagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Search polymers
+        function searchPolymers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filteredData = polymerDatabase.filter(polymer => 
+                polymer.name.toLowerCase().includes(searchTerm) ||
+                polymer.id.toLowerCase().includes(searchTerm) ||
+                polymer.smiles.toLowerCase().includes(searchTerm) ||
+                polymer.category.toLowerCase().includes(searchTerm)
+            );
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+        }
+
+        // Filter data
+        function filterData() {
+            const category = document.getElementById('filterCategory').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            filteredData = polymerDatabase.filter(p => {
+                const matchesSearch = !searchTerm || 
+                    p.name.toLowerCase().includes(searchTerm) ||
+                    p.id.toLowerCase().includes(searchTerm) ||
+                    p.smiles.toLowerCase().includes(searchTerm) ||
+                    p.category.toLowerCase().includes(searchTerm);
+                
+                const matchesCategory = !category || 
+                    (category === 'high' && p.performance > 80) ||
+                    (category === 'medium' && p.performance >= 40 && p.performance <= 80) ||
+                    (category === 'low' && p.performance < 40);
+                
+                const matchesFilter = currentFilter === 'all' || p.category === currentFilter;
+                
+                return matchesSearch && matchesCategory && matchesFilter;
+            });
+            
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+        }
+
+        // Set filter
+        function setFilter(filter, element) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+            element.classList.add('active');
+            filterData();
+        }
+
+        // Show polymer details
+        function showPolymerDetails(polymerId) {
+            const polymer = polymerDatabase.find(p => p.id === polymerId);
+            if (!polymer) return;
+
+            const modal = document.getElementById('polymerModal');
+            const content = document.getElementById('modalContent');
+            
+            // Group descriptors by category
+            const descriptorsByCategory = {};
+            for (const [catKey, catData] of Object.entries(descriptorCategories)) {
+                descriptorsByCategory[catKey] = catData.descriptors
+                    .filter(d => polymer.descriptors[d] !== undefined)
+                    .map(d => ({ name: d, value: polymer.descriptors[d] }))
+                    .sort((a, b) => b.value - a.value)
+                    .slice(0, 10);
+            }
+
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold mb-6 text-gray-900">Polymer Details: ${polymer.id}</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">Polymer Name</p>
+                        <p class="font-semibold text-lg mt-1">${polymer.name}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">Category</p>
+                        <p class="font-semibold text-lg mt-1 capitalize">${polymer.category}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">SMILES Notation</p>
+                        <p class="font-mono text-sm mt-1 break-all">${polymer.smiles}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">Performance Score</p>
+                        <p class="font-bold text-3xl mt-1 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                            ${polymer.performance.toFixed(2)}
+                        </p>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-bold mb-4">Top 10 Descriptors by Category</h3>
+                ${Object.entries(descriptorsByCategory).map(([catKey, descriptors]) => `
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-base mb-3 flex items-center">
+                            <span class="descriptor-badge ${catKey} mr-2">${descriptorCategories[catKey].name}</span>
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${descriptors.map(d => `
+                                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                                    <span class="text-sm text-gray-700">${d.name.replace(/_/g, ' ')}</span>
+                                    <span class="font-semibold text-purple-700">${d.value.toFixed(3)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            modal.classList.add('show');
+        }
+
+        // Close modal
+        function closeModal(event) {
+            const modal = document.getElementById('polymerModal');
+            if (!event || event.target === modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        // Export data
+        function exportData() {
+            const headers = ['ID', 'Name', 'SMILES', 'Category', 'Performance'];
+            const descriptorHeaders = Object.values(descriptorCategories).flatMap(cat => 
+                cat.descriptors.slice(0, 10)
+            );
+            
+            const csv = [
+                [...headers, ...descriptorHeaders].join(','),
+                ...filteredData.map(p => {
+                    const basicData = [
+                        p.id,
+                        `"${p.name}"`,
+                        `"${p.smiles}"`,
+                        p.category,
+                        p.performance.toFixed(3)
+                    ];
+                    const descriptorData = descriptorHeaders.map(d => 
+                        (p.descriptors[d] || 0).toFixed(3)
+                    );
+                    return [...basicData, ...descriptorData].join(',');
+                })
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'triboml_polymer_data.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('Data exported successfully! 💾');
+        }
+
+        // Show descriptor details
+        function showDescriptorDetails() {
+            const modal = document.getElementById('polymerModal');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold mb-6">Molecular Descriptor Categories</h2>
+                <p class="text-gray-700 mb-6">
+                    This database includes <strong>250 molecular descriptors</strong> across 5 major categories. 
+                    Each descriptor provides unique information about polymer structure, properties, and behavior.
+                </p>
+                ${Object.entries(descriptorCategories).map(([key, category]) => `
+                    <div class="mb-6 bg-gray-50 p-5 rounded-lg">
+                        <h3 class="text-lg font-bold mb-3 flex items-center">
+                            <span class="descriptor-badge ${key} mr-2">${category.name}</span>
+                            <span class="text-gray-600 text-sm font-normal ml-2">(${category.descriptors.length} descriptors)</span>
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            ${category.descriptors.slice(0, 18).map(d => `
+                                <span class="text-xs py-2 px-3 bg-white rounded-lg border border-gray-200">
+                                    ${d.replace(/_/g, ' ')}
+                                </span>
+                            `).join('')}
+                            ${category.descriptors.length > 18 ? `
+                                <span class="text-xs py-2 px-3 text-gray-500 italic">
+                                    ...and ${category.descriptors.length - 18} more
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            modal.classList.add('show');
+        }
+
+        // Show methodology
+        function showMethodology() {
+            document.getElementById('methodology').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Show analysis
+        function showAnalysis() {
+            document.getElementById('analysis').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Show statistics
+        function showStatistics() {
+            const modal = document.getElementById('polymerModal');
+            const content = document.getElementById('modalContent');
+            
+            const categories = {};
+            polymerDatabase.forEach(p => {
+                categories[p.category] = (categories[p.category] || 0) + 1;
+            });
+            
+            const performanceRanges = {
+                'High (>80)': polymerDatabase.filter(p => p.performance > 80).length,
+                'Medium (40-80)': polymerDatabase.filter(p => p.performance >= 40 && p.performance <= 80).length,
+                'Low (<40)': polymerDatabase.filter(p => p.performance < 40).length
+            };
+            
+            const avgPerf = polymerDatabase.reduce((sum, p) => sum + p.performance, 0) / polymerDatabase.length;
+            const maxPerf = Math.max(...polymerDatabase.map(p => p.performance));
+            const minPerf = Math.min(...polymerDatabase.map(p => p.performance));
+            
+            content.innerHTML = `
+                <h2 class="text-2xl font-bold mb-6">Database Statistics</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-purple-50 to-blue-50 p-5 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">Average Performance</p>
+                        <p class="text-3xl font-bold text-purple-700">${avgPerf.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-teal-50 p-5 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">Maximum Performance</p>
+                        <p class="text-3xl font-bold text-green-700">${maxPerf.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-red-50 p-5 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">Minimum Performance</p>
+                        <p class="text-3xl font-bold text-orange-700">${minPerf.toFixed(2)}</p>
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-bold mb-3">Category Distribution</h3>
+                <div class="mb-6">
+                    ${Object.entries(categories).map(([cat, count]) => `
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="font-medium capitalize">${cat}</span>
+                            <div class="flex items-center">
+                                <div class="w-48 bg-gray-200 rounded-full h-3 mr-3">
+                                    <div class="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full" 
+                                         style="width: ${(count / polymerDatabase.length * 100)}%"></div>
+                                </div>
+                                <span class="font-bold text-purple-700">${count}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <h3 class="text-lg font-bold mb-3">Performance Distribution</h3>
+                <div>
+                    ${Object.entries(performanceRanges).map(([range, count]) => `
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="font-medium">${range}</span>
+                            <div class="flex items-center">
+                                <div class="w-48 bg-gray-200 rounded-full h-3 mr-3">
+                                    <div class="bg-gradient-to-r from-green-500 to-teal-500 h-3 rounded-full" 
+                                         style="width: ${(count / polymerDatabase.length * 100)}%"></div>
+                                </div>
+                                <span class="font-bold text-green-700">${count}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            modal.classList.add('show');
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-24 right-6 bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Setup charts
+        function setupCharts() {
+            // Performance distribution chart
+            const perfCtx = document.getElementById('performanceChart').getContext('2d');
+            const performanceRanges = {
+                '0-20': polymerDatabase.filter(p => p.performance < 20).length,
+                '20-40': polymerDatabase.filter(p => p.performance >= 20 && p.performance < 40).length,
+                '40-60': polymerDatabase.filter(p => p.performance >= 40 && p.performance < 60).length,
+                '60-80': polymerDatabase.filter(p => p.performance >= 60 && p.performance < 80).length,
+                '80-100': polymerDatabase.filter(p => p.performance >= 80).length
+            };
+
+            new Chart(perfCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(performanceRanges),
+                    datasets: [{
+                        label: 'Number of Polymers',
+                        data: Object.values(performanceRanges),
+                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 10 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Category distribution chart
+            const catCtx = document.getElementById('categoryChart').getContext('2d');
+            const categories = {};
+            polymerDatabase.forEach(p => {
+                categories[p.category] = (categories[p.category] || 0) + 1;
+            });
+
+            new Chart(catCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categories).map(c => c.charAt(0).toUpperCase() + c.slice(1)),
+                    datasets: [{
+                        data: Object.values(categories),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(240, 147, 251, 0.8)',
+                            'rgba(79, 172, 254, 0.8)',
+                            'rgba(67, 233, 123, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Navigation links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    const target = this.getAttribute('href');
+                    document.querySelector(target).scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+
+            // Close modal on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
+        }
+
+        // Initialize the application
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>
